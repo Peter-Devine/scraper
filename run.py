@@ -18,24 +18,22 @@ parser.add_argument('--page_url', required=True)
 parser.add_argument('--cutoff_date', required=True)
 args = parser.parse_args()
 
+url = args.page_url
+cutoff_date = args.cutoff_date
 
+name = url.split("/")[-1] if len(url.split("/")[-1]) > 0 else url.split("/")[-2]
 
 data_path = os.path.join(".", "data")
 if not os.path.exists(data_path):
     os.mkdir(data_path)
 
-post_data_path = os.path.join(data_path, "posts")
+post_data_path = os.path.join(data_path, name)
 if not os.path.exists(post_data_path):
     os.mkdir(post_data_path)
 
-
 driver = initialize_driver(args.chrome, args.windows)
 
-url = args.page_url
-
 driver.get(url)
-
-cutoff_date = args.cutoff_date
 
 print(f"Scrolling {url} until {cutoff_date}")
 
@@ -57,7 +55,7 @@ for i, post_link in tqdm(enumerate(post_links)):
 
     post_element = driver.find_element_by_xpath('.//div[contains(@class, "userContentWrapper")]')
 
-    post_data = get_post_data(driver, post_element)
+    post_data = get_post_data(driver, post_element, post_link)
 
     with open(os.path.join(post_data_path, f'{i}.json'), 'w') as f:
         json.dump(post_data, f)

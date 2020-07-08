@@ -117,7 +117,7 @@ def get_post_links(post):
     return post_link
 
 
-def get_post_data(driver, post):
+def get_post_data(driver, post, post_link):
 
     date = post.find_element_by_xpath('.//span[contains(@class, "timestampContent")]/..').get_attribute("title")
 
@@ -162,7 +162,18 @@ def get_post_data(driver, post):
 
     comment_data = [get_comment_data(comment) for comment in comments]
 
+    if "/videos/" in post_link:
+        post_type = "videos"
+    elif "/photos/" in post_link:
+        post_type = "photos"
+    elif "/posts/" in post_link:
+        post_type = "posts"
+    else:
+        post_type = "other"
+
     return {
+        "post_link": post_link,
+        "post_type": post_type,
         "date": date,
         "is_video": is_video,
         "is_link": is_link,
