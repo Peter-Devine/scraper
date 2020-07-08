@@ -49,7 +49,7 @@ def initialize_driver(is_chrome, is_windows):
         opts = FirefoxOptions()
 
         driver_name = "geckodriver"
-    #opts.add_argument("--headless")
+    opts.add_argument("--headless")
     opts.add_argument("--width=1920")
     opts.add_argument("--height=1080")
 
