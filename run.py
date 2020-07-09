@@ -27,9 +27,9 @@ data_path = os.path.join(".", "data")
 if not os.path.exists(data_path):
     os.mkdir(data_path)
 
-post_data_path = os.path.join(data_path, name)
-if not os.path.exists(post_data_path):
-    os.mkdir(post_data_path)
+page_data_path = os.path.join(data_path, name)
+if not os.path.exists(page_data_path):
+    os.mkdir(page_data_path)
 
 driver = initialize_driver(args.chrome, args.windows)
 
@@ -43,21 +43,41 @@ posts = driver.find_elements_by_xpath('//div[contains(@class, "userContentWrappe
 
 post_links = [get_post_links(post) for post in tqdm(posts)]
 
-with open(os.path.join(data_path, 'post_links.json'), 'w') as f:
+post_links = list(set(post_links))
+
+with open(os.path.join(page_data_path, 'post_links.json'), 'w') as f:
     json.dump(post_links, f)
 
 driver.quit()
 
-for i, post_link in tqdm(enumerate(post_links)):
+print(f"Now scraping {len(post_links)} posts from {name}")
+
+for i, post_link in enumerate(post_links):
+    print(f"THIS IS NUMBER {i}")
+
     driver = initialize_driver(True, True)
 
     driver.get(post_link)
 
-    post_element = driver.find_element_by_xpath('.//div[contains(@class, "userContentWrapper")]')
+    if "/videos/" in post_link:
+        post_type = "videos"
+    elif "/photos/" in post_link:
+        post_type = "photos"
+    elif "/posts/" in post_link:
+        post_type = "posts"
+    elif "/notes/" in post_link:
+        post_type = "notes"
+    else:
+        post_type = "other"
 
-    post_data = get_post_data(driver, post_element, post_link)
+    if post_type == "notes":
+        post_element = driver.find_element_by_xpath('.//div[contains(@class, "fb_content")]')
+    else:
+        post_element = driver.find_element_by_xpath('.//div[contains(@class, "userContentWrapper")]')
 
-    with open(os.path.join(post_data_path, f'{i}.json'), 'w') as f:
+    post_data = get_post_data(driver, post_element, post_link, post_type)
+
+    with open(os.path.join(page_data_path, f'{i}.json'), 'w') as f:
         json.dump(post_data, f)
 
     driver.quit()

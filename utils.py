@@ -19,8 +19,16 @@ def scroll(driver, end_date, num_scrolls=MAX_SCROLLS_POSSIBLE):
     WebDriverWait(driver, 7).until(
             EC.invisibility_of_element_located((By.XPATH, "//span[@aria-valuetext=='Loading...']")))
 
-    last_post = driver.find_elements_by_xpath('//div[contains(@class, "userContentWrapper")]')[-1]
-    last_date = last_post.find_element_by_xpath('.//span[contains(@class, "timestampContent")]/..').get_attribute("title")
+    def get_last_date(position=-1):
+        last_post = driver.find_elements_by_xpath('//div[contains(@class, "userContentWrapper")]')[position]
+        last_date = get_attribute(last_post, './/span[contains(@class, "timestampContent")]/..', "title")
+
+        if last_date is None:
+            return get_last_date(position=position-1)
+        else:
+            return last_date
+
+    last_date = get_last_date()
 
     last_date = last_date.replace(" at", "")
 
@@ -117,9 +125,14 @@ def get_post_links(post):
     return post_link
 
 
-def get_post_data(driver, post, post_link):
+def get_post_data(driver, post, post_link, post_type):
 
-    date = post.find_element_by_xpath('.//span[contains(@class, "timestampContent")]/..').get_attribute("title")
+    if post_type == "notes":
+        date = get_text(post, './/a[contains(@class, "_39g5")]')
+        post_text = get_text(post, './/div[contains(@class, "_39k5")]')
+    else:
+        date = get_attribute(post, './/span[contains(@class, "timestampContent")]/..', "title")
+        post_text = get_text(post, './/div[@data-testid="post_message"]')
 
     is_video = does_element_exist(post, './/div[@data-testid="post_message"]/following-sibling::div//video')
 
@@ -130,8 +143,6 @@ def get_post_data(driver, post, post_link):
         is_link = does_element_exist(post, './/div[@data-testid="post_message"]/following-sibling::div//a')
         link_destination = get_attribute(post, './/div[@data-testid="post_message"]/following-sibling::div//a', "href")
 
-    post_text = get_text(post, './/div[@data-testid="post_message"]')
-
     num_reactions = get_text(post, './/a[@data-testid="UFI2ReactionsCount/root"]/span[2]/span/span')
     num_comments = get_text(post, './/a[contains(@class, "_3hg-")]')
     num_shares = get_text(post, './/a[@data-testid="UFI2SharesCount/root"]')
@@ -141,9 +152,9 @@ def get_post_data(driver, post, post_link):
     time.sleep(1)
 
     while True:
-        original_comments_num = len(post.find_elements_by_xpath('.//div[@aria-label="Comment"]'))
+        original_comments_to_open_num = len(post.find_elements_by_xpath('.//span[contains(@class, "_4ssp")]'))
 
-        if original_comments_num < 1:
+        if original_comments_to_open_num < 1:
             break
 
         is_comments_to_open = click_elements(driver, post, './/span[contains(@class, "_4ssp")]')
@@ -151,25 +162,19 @@ def get_post_data(driver, post, post_link):
         if is_comments_to_open == False:
             break
 
-        i = 100
-        while original_comments_num == len(post.find_elements_by_xpath('.//div[@aria-label="Comment"]')):
+        i = 80
+        while original_comments_to_open_num == len(post.find_elements_by_xpath('.//span[contains(@class, "_4ssp")]')):
             time.sleep(0.1)
             i -= 1
             if i < 0:
                 break
 
+
+    click_elements(driver, post, './/a[contains(@class, "_5v47")]')
+
     comments = post.find_elements_by_xpath('.//div[@aria-label="Comment"]')
 
     comment_data = [get_comment_data(comment) for comment in comments]
-
-    if "/videos/" in post_link:
-        post_type = "videos"
-    elif "/photos/" in post_link:
-        post_type = "photos"
-    elif "/posts/" in post_link:
-        post_type = "posts"
-    else:
-        post_type = "other"
 
     return {
         "post_link": post_link,
