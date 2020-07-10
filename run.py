@@ -75,7 +75,7 @@ for i, post_link in enumerate(post_links):
     else:
         post_element = driver.find_element_by_xpath('.//div[contains(@class, "userContentWrapper")]')
 
-    post_data = get_post_data(driver, post_element, post_link, post_type)
+    post_data = get_post_data(driver, post_element, post_type)
 
     with open(os.path.join(page_data_path, f'{i}.json'), 'w') as f:
         json.dump(post_data, f)

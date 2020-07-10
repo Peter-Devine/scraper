@@ -70,6 +70,14 @@ def initialize_driver(is_chrome, is_windows):
         driver = webdriver.Firefox(options=opts, executable_path=driver_path)
     return driver
 
+def wait_for_element(driver, xpath, time):
+    try:
+        WebDriverWait(driver, time).until(
+                EC.visibility_of_element_located((By.XPATH, xpath)))
+        return True
+    except Exception:
+        return False
+
 # CHeck if element exists
 def does_element_exist(driver, xpath):
     try:
@@ -125,7 +133,9 @@ def get_post_links(post):
     return post_link
 
 
-def get_post_data(driver, post, post_link, post_type):
+def get_post_data(driver, post, post_type):
+
+    wait_for_element(driver, './/a[contains(@class, "_3hg-")]', 10)
 
     if post_type == "notes":
         date = get_text(post, './/a[contains(@class, "_39g5")]')
@@ -147,12 +157,20 @@ def get_post_data(driver, post, post_link, post_type):
     num_comments = get_text(post, './/a[contains(@class, "_3hg-")]')
     num_shares = get_text(post, './/a[@data-testid="UFI2SharesCount/root"]')
 
-    click_element(post, './/a[contains(@class, "_3hg-")]')
+    # N.B. Comments are already displayed on notes posts
+    if not does_element_exist(driver, './/div[@aria-label="Comment"]'):
+        click_element(post, './/a[contains(@class, "_3hg-")]')
 
-    time.sleep(1)
+    wait_for_element(driver, './/div[@aria-label="Comment"]', 5)
+
+    # We scroll to avoid video auto-playing and then automatically going to the next page
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+    driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
     while True:
         original_comments_to_open_num = len(post.find_elements_by_xpath('.//span[contains(@class, "_4ssp")]'))
+
+        print(f"Opening {original_comments_to_open_num} more comments")
 
         if original_comments_to_open_num < 1:
             break
@@ -169,12 +187,14 @@ def get_post_data(driver, post, post_link, post_type):
             if i < 0:
                 break
 
-
+    print(f"Expanding comments")
     click_elements(driver, post, './/a[contains(@class, "_5v47")]')
 
     comments = post.find_elements_by_xpath('.//div[@aria-label="Comment"]')
 
     comment_data = [get_comment_data(comment) for comment in comments]
+
+    post_link = driver.current_url
 
     return {
         "post_link": post_link,
@@ -190,10 +210,13 @@ def get_post_data(driver, post, post_link, post_type):
     }
 
 def get_comment_data(comment, is_reply=False):
+
     comment_text = get_text(comment, './/span[@dir="ltr"]')
     has_image = does_element_exist(comment, './/div[@class="_2txe"]')
     reactions = get_text(comment, './/span[@class="_1lld"]')
     commenter_name = get_text(comment, './/*[@class="_6qw4"]')
+
+    print(f"Getting comment data from {commenter_name}")
 
     comment_data = {
         "comment_text": comment_text,
