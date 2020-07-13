@@ -100,4 +100,4 @@ for dataset_name_1, sent_df_1 in dataset_dfs.items():
 
             differences = pd.Series({word: wi - gi for word, wi, gi in zip(all_words, indices_1, indices_2)}).sort_values()
 
-            differences.to_csv(os.path.join(results_path, f"{dataset_name_1}_vs_{dataset_name_2}_most_popular_words.csv"))
+            differences.to_csv(os.path.join(results_path, f"{dataset_name_1}_vs_{dataset_name_2}_most_popular_{top_k_words}_words.csv"))

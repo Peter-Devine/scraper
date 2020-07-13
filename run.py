@@ -35,6 +35,8 @@ driver = initialize_driver(args.chrome, args.windows)
 
 driver.get(url)
 
+page_name = get_text(driver, './/a[@class="_64-f"]')
+
 print(f"Scrolling {url} until {cutoff_date}")
 
 scroll(driver, pd.to_datetime(cutoff_date))
@@ -76,6 +78,8 @@ for i, post_link in enumerate(post_links):
         post_element = driver.find_element_by_xpath('.//div[contains(@class, "userContentWrapper")]')
 
     post_data = get_post_data(driver, post_element, post_type)
+
+    post_data["page_name"] = page_name
 
     with open(os.path.join(page_data_path, f'{i}.json'), 'w') as f:
         json.dump(post_data, f)

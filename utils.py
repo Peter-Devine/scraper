@@ -96,7 +96,7 @@ def get_attribute(driver, xpath, attribute):
 # CHeck if element exists
 def get_text(driver, xpath):
     try:
-        return driver.find_element_by_xpath(xpath).text
+        return driver.find_element_by_xpath(xpath).text.strip()
     except Exception:
         return None
 
