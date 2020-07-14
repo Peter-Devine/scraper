@@ -55,7 +55,7 @@ driver.quit()
 print(f"Now scraping {len(post_links)} posts from {name}")
 
 for i, post_link in enumerate(post_links):
-    print(f"THIS IS NUMBER {i}")
+    print(f"Scraping {post_link}")
 
     driver = initialize_driver(True, True)
 

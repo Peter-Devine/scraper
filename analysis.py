@@ -46,11 +46,8 @@ for dataset_name, all_dataset_posts in all_data.items():
 def get_sentiment_df(list_of_comments):
 
     sid = SentimentIntensityAnalyzer()
-
     sentences = [x for x in list_of_comments if x is not None]
-
     sentiments = [sid.polarity_scores(sentence)["compound"] for sentence in sentences]
-
     df = pd.DataFrame({"text": sentences, "sentiment": sentiments})
 
     return df

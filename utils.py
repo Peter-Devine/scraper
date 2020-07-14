@@ -215,6 +215,7 @@ def get_comment_data(comment, is_reply=False):
     has_image = does_element_exist(comment, './/div[@class="_2txe"]')
     reactions = get_text(comment, './/span[@class="_1lld"]')
     commenter_name = get_text(comment, './/*[@class="_6qw4"]')
+    comment_date = get_attribute(comment, './/a[@class="_6qw7"]/abbr', 'data-tooltip-content')
 
     print(f"Getting comment data from {commenter_name}")
 
@@ -223,6 +224,7 @@ def get_comment_data(comment, is_reply=False):
         "commenter_name": commenter_name,
         "has_image": has_image,
         "reactions": reactions,
+        "comment_date": comment_date
     }
 
     if not is_reply:
