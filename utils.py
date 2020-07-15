@@ -1,4 +1,5 @@
 import os
+import re
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
@@ -8,7 +9,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 import time
 import pandas as pd
 
-MAX_SCROLLS_POSSIBLE = 1000
+MAX_SCROLLS_POSSIBLE = 3000
 
 def scroll(driver, end_date, num_scrolls=MAX_SCROLLS_POSSIBLE):
 
@@ -122,6 +123,23 @@ def click_elements(driver, search_element, xpath):
         print(f"Error in clicking multiple {xpath}\n\n\n {err}")
         return True
 
+def is_string_url(string_input):
+    # If we do not have a string, then it definitely is not a URL
+    if type(string_input) != str:
+        return False
+
+    # Regex found from https://stackoverflow.com/questions/7160737/python-how-to-validate-a-url-in-python-malformed-or-not
+    regex = re.compile(
+        r'^(?:http|ftp)s?://' # http:// or https://
+        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|' #domain...
+        r'localhost|' #localhost...
+        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})' # ...or ip
+        r'(?::\d+)?' # optional port
+        r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+
+    is_string_url_bool = re.match(regex, string_input) is not None
+
+    return is_string_url_bool
 
 def get_post_links(post):
 

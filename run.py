@@ -4,7 +4,7 @@ import json
 import os
 import argparse
 
-from utils import initialize_driver, does_element_exist, get_attribute, get_text, click_element, click_elements, scroll, get_post_links, get_post_data
+from utils import initialize_driver, does_element_exist, get_attribute, get_text, click_element, click_elements, scroll, get_post_links, get_post_data, is_string_url
 
 
 parser = argparse.ArgumentParser()
@@ -55,6 +55,10 @@ driver.quit()
 print(f"Now scraping {len(post_links)} posts from {name}")
 
 for i, post_link in enumerate(post_links):
+
+    if not is_string_url(post_link):
+        continue
+
     print(f"Scraping {post_link}")
 
     driver = initialize_driver(True, True)
