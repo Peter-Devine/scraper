@@ -13,6 +13,8 @@ MAX_SCROLLS_POSSIBLE = 3000
 
 def scroll(driver, end_date, num_scrolls=MAX_SCROLLS_POSSIBLE):
 
+    wait_for_element(driver, '//div[contains(@class, "userContentWrapper")]', 3)
+
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
     time.sleep(0.1)
@@ -45,7 +47,7 @@ def scroll(driver, end_date, num_scrolls=MAX_SCROLLS_POSSIBLE):
         scroll(driver, end_date, num_scrolls=num_scrolls-1)
 
 # Initializes the webdriver for the browser
-def initialize_driver(is_chrome, is_windows):
+def initialize_driver(is_chrome, is_windows, is_headless=True):
 
     if is_chrome:
         opts = ChromeOptions()
@@ -58,7 +60,9 @@ def initialize_driver(is_chrome, is_windows):
         opts = FirefoxOptions()
 
         driver_name = "geckodriver"
-    opts.add_argument("--headless")
+
+    if is_headless:
+        opts.add_argument("--headless")
     opts.add_argument("--width=1920")
     opts.add_argument("--height=1080")
 
@@ -71,12 +75,13 @@ def initialize_driver(is_chrome, is_windows):
         driver = webdriver.Firefox(options=opts, executable_path=driver_path)
     return driver
 
-def wait_for_element(driver, xpath, time):
+def wait_for_element(driver, xpath, time_s):
     try:
-        WebDriverWait(driver, time).until(
+        WebDriverWait(driver, time_s).until(
                 EC.visibility_of_element_located((By.XPATH, xpath)))
         return True
     except Exception:
+        print(f"{xpath} was not found after {time_s} seconds")
         return False
 
 # CHeck if element exists
@@ -150,6 +155,18 @@ def get_post_links(post):
 
     return post_link
 
+def get_post_author_name(post):
+    post_author_name = get_text(post, '(.//span[[contains(@class, "fwb")]//a)[1]')
+
+    if post_author_name is None:
+        post_author_name = get_text(post, '(.//span[[contains(@class, "fwb")]//span)[1]')
+
+    return post_author_name
+
+def get_post_recipient_name(post):
+    post_recipient_name = get_text(post, '(.//span[[contains(@class, "fwb")]//a)[2]')
+
+    return post_recipient_name
 
 def get_post_data(driver, post, post_type):
 
@@ -175,6 +192,9 @@ def get_post_data(driver, post, post_type):
     num_comments = get_text(post, './/a[contains(@class, "_3hg-")]')
     num_shares = get_text(post, './/a[@data-testid="UFI2SharesCount/root"]')
 
+    post_author_name = get_post_author_name(post)
+    post_recipient_name = get_post_recipient_name(post)
+
     # N.B. Comments are already displayed on notes posts
     if not does_element_exist(driver, './/div[@aria-label="Comment"]'):
         click_element(post, './/a[contains(@class, "_3hg-")]')
@@ -185,7 +205,10 @@ def get_post_data(driver, post, post_type):
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
 
+    # Keep expanding comments until the number of expanable comments is 0
     while True:
+        wait_for_element(driver, './/span[contains(@class, "_4ssp")]', 15)
+
         original_comments_to_open_num = len(post.find_elements_by_xpath('.//span[contains(@class, "_4ssp")]'))
 
         print(f"Opening {original_comments_to_open_num} more comments")
@@ -198,7 +221,8 @@ def get_post_data(driver, post, post_type):
         if is_comments_to_open == False:
             break
 
-        i = 80
+        # If there were expandable comments to open, but clicking them has not expanded them yet, wait up to N seconds for them to expand
+        i = 200
         while original_comments_to_open_num == len(post.find_elements_by_xpath('.//span[contains(@class, "_4ssp")]')):
             time.sleep(0.1)
             i -= 1
@@ -217,6 +241,8 @@ def get_post_data(driver, post, post_type):
     return {
         "post_link": post_link,
         "post_type": post_type,
+        "post_author_name": post_author_name,
+        "post_recipient_name": post_recipient_name,
         "date": date,
         "is_video": is_video,
         "is_link": is_link,

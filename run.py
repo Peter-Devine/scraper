@@ -21,71 +21,82 @@ args = parser.parse_args()
 url = args.page_url
 cutoff_date = args.cutoff_date
 
-name = url.split("/")[-1] if len(url.split("/")[-1]) > 0 else url.split("/")[-2]
+def get_all_page_data(url, is_community=False):
 
-data_path = os.path.join(".", "data")
-if not os.path.exists(data_path):
-    os.mkdir(data_path)
+    name = url.split("/")[-1] if len(url.split("/")[-1]) > 0 else url.split("/")[-2]
 
-page_data_path = os.path.join(data_path, name)
-if not os.path.exists(page_data_path):
-    os.mkdir(page_data_path)
+    if is_community:
+        name = os.path.join(name, "community")
+        url = url + "/community"
 
-driver = initialize_driver(args.chrome, args.windows)
+    data_path = os.path.join(".", "data")
+    if not os.path.exists(data_path):
+        os.mkdir(data_path)
 
-driver.get(url)
+    page_data_path = os.path.join(data_path, name)
+    if not os.path.exists(page_data_path):
+        os.mkdir(page_data_path)
 
-page_name = get_text(driver, './/a[@class="_64-f"]')
+    should_scrape_headless = is_community == False
+    driver = initialize_driver(args.chrome, args.windows, is_headless=should_scrape_headless)
 
-print(f"Scrolling {url} until {cutoff_date}")
+    driver.get(url)
 
-scroll(driver, pd.to_datetime(cutoff_date))
+    page_name = get_text(driver, './/a[@class="_64-f"]')
 
-posts = driver.find_elements_by_xpath('//div[contains(@class, "userContentWrapper")]')
+    print(f"Scrolling {url} until {cutoff_date}")
 
-post_links = [get_post_links(post) for post in tqdm(posts)]
+    scroll(driver, pd.to_datetime(cutoff_date))
 
-post_links = list(set(post_links))
+    posts = driver.find_elements_by_xpath('//div[contains(@class, "userContentWrapper")]')
 
-with open(os.path.join(page_data_path, 'post_links.json'), 'w') as f:
-    json.dump(post_links, f)
+    post_links = [get_post_links(post) for post in tqdm(posts)]
 
-driver.quit()
+    post_links = list(set(post_links))
 
-print(f"Now scraping {len(post_links)} posts from {name}")
-
-for i, post_link in enumerate(post_links):
-
-    if not is_string_url(post_link):
-        continue
-
-    print(f"Scraping {post_link}")
-
-    driver = initialize_driver(True, True)
-
-    driver.get(post_link)
-
-    if "/videos/" in post_link:
-        post_type = "videos"
-    elif "/photos/" in post_link:
-        post_type = "photos"
-    elif "/posts/" in post_link:
-        post_type = "posts"
-    elif "/notes/" in post_link:
-        post_type = "notes"
-    else:
-        post_type = "other"
-
-    if post_type == "notes":
-        post_element = driver.find_element_by_xpath('.//div[contains(@class, "fb_content")]')
-    else:
-        post_element = driver.find_element_by_xpath('.//div[contains(@class, "userContentWrapper")]')
-
-    post_data = get_post_data(driver, post_element, post_type)
-
-    post_data["page_name"] = page_name
-
-    with open(os.path.join(page_data_path, f'{i}.json'), 'w') as f:
-        json.dump(post_data, f)
+    with open(os.path.join(page_data_path, 'post_links.json'), 'w') as f:
+        json.dump(post_links, f)
 
     driver.quit()
+
+    print(f"Now scraping {len(post_links)} posts from {name}")
+
+    for i, post_link in enumerate(post_links):
+
+        if not is_string_url(post_link):
+            continue
+
+        print(f"Scraping {post_link}")
+
+        driver = initialize_driver(args.chrome, args.windows)
+
+        driver.get(post_link)
+
+        if "/videos/" in post_link:
+            post_type = "videos"
+        elif "/photos/" in post_link:
+            post_type = "photos"
+        elif "/posts/" in post_link:
+            post_type = "posts"
+        elif "/notes/" in post_link:
+            post_type = "notes"
+        else:
+            post_type = "other"
+
+        if post_type == "notes":
+            post_element = driver.find_element_by_xpath('.//div[contains(@class, "fb_content")]')
+        else:
+            post_element = driver.find_element_by_xpath('.//div[contains(@class, "userContentWrapper")]')
+
+        post_data = get_post_data(driver, post_element, post_type)
+
+        post_data["page_name"] = page_name
+
+        with open(os.path.join(page_data_path, f'page_post_{i}.json'), 'w') as f:
+            json.dump(post_data, f)
+
+        driver.quit()
+
+    get_all_page_data(url, is_community=True)
+
+get_all_page_data(url)
