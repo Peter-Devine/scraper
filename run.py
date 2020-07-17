@@ -97,6 +97,7 @@ def get_all_page_data(url, is_community=False):
 
         driver.quit()
 
-    get_all_page_data(url, is_community=True)
+    if not is_community:
+        get_all_page_data(url, is_community=True)
 
 get_all_page_data(url)

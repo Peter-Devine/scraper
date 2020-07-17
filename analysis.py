@@ -18,14 +18,19 @@ all_data = {}
 for dataset in os.listdir(data_path):
     all_data[dataset] = []
     # Iterate through posts
-    for file in os.listdir(os.path.join(data_path, dataset)):
-        # Do not look at post_links
-        if "post_links" not in file:
-            file_path = os.path.join(data_path, dataset, file)
-            with open(file_path, "rb") as f:
-                data = json.load(f)
+    dataset_data_dir = os.path.join(data_path, dataset)
+    for file in os.listdir(dataset_data_dir):
+        post_data_dir = os.path.join(dataset_data_dir, file)
 
-            all_data[dataset].append(data)
+        # Do not look at post_links
+        if not os.path.isfile(post_data_dir) or "post_links" in file:
+            continue
+
+        file_path = os.path.join(data_path, dataset, file)
+        with open(file_path, "rb") as f:
+            data = json.load(f)
+
+        all_data[dataset].append(data)
 
 # We get a simple list of comments for each page
 per_dataset_text = {}
@@ -37,18 +42,23 @@ for dataset_name, all_dataset_posts in all_data.items():
             if comment["commenter_name"] == post["page_name"]:
                 continue
 
-            per_dataset_text[dataset_name].append(comment["comment_text"])
+            per_dataset_text[dataset_name].append(comment)
 
             for reply in comment["replies"]:
-                per_dataset_text[dataset_name].append(reply["comment_text"])
+                per_dataset_text[dataset_name].append(reply)
 
 # We find the sentiment for each individual post
 def get_sentiment_df(list_of_comments):
 
+    list_of_comments = [x for x in list_of_comments if x["comment_text"] is not None]
+
     sid = SentimentIntensityAnalyzer()
-    sentences = [x for x in list_of_comments if x is not None]
+    sentences = [x["comment_text"] for x in list_of_comments]
     sentiments = [sid.polarity_scores(sentence)["compound"] for sentence in sentences]
-    df = pd.DataFrame({"text": sentences, "sentiment": sentiments})
+
+    df = pd.DataFrame(list_of_comments)
+    df["sentiment"] = sentiments
+    df["text"] = df.comment_text
 
     return df
 
@@ -66,6 +76,10 @@ for dataset_name, comment_list in per_dataset_text.items():
     top_k_comments = 20
     sent_df.sort_values("sentiment", ascending=False).iloc[:top_k_comments].to_csv(os.path.join(results_path, f"{dataset_name}_top_{top_k_comments}_comments.csv"))
     sent_df.sort_values("sentiment", ascending=True).iloc[:top_k_comments].to_csv(os.path.join(results_path, f"{dataset_name}_bottom_{top_k_comments}_comments.csv"))
+
+    # Get the top K most common commenters
+    top_k_commenters = 20
+    sent_df["commenter_name"].value_counts()[:top_k_commenters].to_csv(os.path.join(results_path, f"{dataset_name}_top_{top_k_commenters}_commenters.csv"))
 
     dataset_dfs[dataset_name] = sent_df
 
