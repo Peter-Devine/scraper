@@ -1,6 +1,8 @@
 import os
 import pandas as pd
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
 import nltk
 import json
 from matplotlib import pyplot as plt
@@ -62,6 +64,30 @@ def get_sentiment_df(list_of_comments):
 
     return df
 
+def get_top_k_words_from_n_topics(df, k, n):
+    # Make list of comments into BOW
+    vectorizer = CountVectorizer()
+    bow_embed = vectorizer.fit_transform(df.text.str.lower())
+
+    # Do LDA over BOW
+    lda = LatentDirichletAllocation(n_components=n, max_iter=10, learning_method='online', learning_offset=50., random_state=111)
+    embeddings = lda.fit_transform(bow_embed)
+    reversed_vocab = {v:k for k,v in vectorizer.vocabulary_.items()}
+
+    topic_word_lists = []
+
+    for i, component in enumerate(lda.components_ / lda.components_.sum(axis=1)[:, np.newaxis]):
+        topic_word_list = []
+
+        idx_of_highest_vals = component.argsort()[-k:][::-1]
+
+        for idx in idx_of_highest_vals:
+            topic_word_list.append(reversed_vocab[idx])
+
+        topic_word_lists.append({f"Topic {i} words": topic_word_list})
+
+    return pd.DataFrame(topic_word_lists)
+
 dataset_dfs = {}
 for dataset_name, comment_list in per_dataset_text.items():
     sent_df = get_sentiment_df(comment_list)
@@ -80,6 +106,10 @@ for dataset_name, comment_list in per_dataset_text.items():
     # Get the top K most common commenters
     top_k_commenters = 20
     sent_df["commenter_name"].value_counts()[:top_k_commenters].to_csv(os.path.join(results_path, f"{dataset_name}_top_{top_k_commenters}_commenters.csv"))
+
+    # Do LDA on text list
+    topic_word_df = get_top_k_words_from_n_topics(sent_df, k=5, n=10)
+    topic_word_df.to_csv(os.path.join(results_path, f"{dataset_name}_characteristic_topic_words.csv"))
 
     dataset_dfs[dataset_name] = sent_df
 
